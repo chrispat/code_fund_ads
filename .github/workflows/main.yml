@@ -41,7 +41,7 @@ jobs:
     
     - name: Set up assets cache key
       run: |
-        find app/javascript -type f | xargs -d'\n' -P0 -n1 md5sum | sort -k 2 | md5sum) > dependency_checksum
+        find app/javascript -type f | xargs -d'\n' -P0 -n1 md5sum | sort -k 2 | md5sum > dependency_checksum
     
     - run: |
           sudo curl -sL https://deb.nodesource.com/setup_13.x | sudo bash -
