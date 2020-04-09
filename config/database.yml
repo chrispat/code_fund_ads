@@ -1,6 +1,7 @@
 default: &default
   adapter: postgresql
   encoding: unicode
+  host: <%= ENV.fetch("PG_HOST", "localhost") %>
   pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5).to_i %>
   timeout: <%= ENV.fetch("PG_TIMEOUT_IN_SECONDS", 3).to_i.seconds %>
   username: <%= ENV['PG_USERNAME'] %>
@@ -9,7 +10,6 @@ default: &default
 development:
   primary: &development_primary
     <<: *default
-    host: localhost
     database: <%= ENV.fetch("PG_DATABASE_NAME", "code_fund_ads_development") %>
   primary_replica:
     <<: *development_primary
@@ -18,7 +18,6 @@ development:
 test:
   primary: &test_primary
     <<: *default
-    host: localhost
     database: code_fund_ads_test
   primary_replica:
     <<: *test_primary
