@@ -33,60 +33,82 @@ jobs:
       env:
         DEFAULT_HOST: app.codefund.io
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Get Yarn Cache
       id: yarn-cache
       run: echo "::set-output name=dir::$(yarn cache dir)"
-
-    - name: Cache Node Modules
+    
+    - name: Set up assets cache key
+      run: |
+        find app/javascript -type f | xargs -d'\n' -P0 -n1 md5sum | sort -k 2 | md5sum) > dependency_checksum
+    
+    - run: |
+          sudo curl -sL https://deb.nodesource.com/setup_13.x | sudo bash -
+          curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+          echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+          sudo apt-get update && sudo apt-get install -y libpq-dev postgresql-client nodejs yarn
+        
+    - name: Restore gem cache
+      id: gem-cache
+      uses: actions/cache@master
+      with:
+        path: vendor/bundle
+        key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-gem-
+          
+    - name: Restore yarn cache
       id: node-modules-cache
-      uses: actions/cache@v1
+      uses: actions/cache@master
       with:
         path: ${{ steps.yarn-cache.outputs.dir }}
         key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
         restore-keys: |
           ${{ runner.os }}-yarn-
 
-    - name: Cache Gems
-      id: gem-cache
-      uses: actions/cache@v1
-      with:
-        path: vendor/bundle
-        key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-gem-
-
     - name: Cache Assets
       id: assets-cache
       uses: actions/cache@v1
       with:
-        path: public/packs-test
-        key: ${{ runner.os }}-assets-${{ steps.extract_branch.outputs.branch }}
+        path: |
+         'public/packs-test'
+         'public/assets'
+         'tmp/cache/webpacker'
+         'tmp/cache/assets/sprockets'
+        key: ${{ runner.os }}-assets-${{ hashFiles( 'dependency_checksum' ) }}-${{ github.ref }}
         restore-keys: |
           ${{ runner.os }}-assets-
 
-    - name: Bundle Install
-      run: bundle install --path vendor/bundle --jobs 4 --retry 3
+    - name: Install gem dependencies
+      run: |
+       gem install bundler:2.1.4
+       bundle check || bundle install --jobs=6 --retry=3 --path vendor/bundle
+   
+    - name: Install yarn dependencies
+      run: yarn install --check-files --frozen-lockfile
 
-    - name: Yarn Install
-      run: bin/rails yarn:install
+    - name: Precompile Assets
+      shell: bash
+      run: bundle exec rails assets:precompile
+
+    - name: Setup DB
+      run: bundle exec rails db:drop db:create db:structure:load --trace
 
     - name: Compile Assets
       shell: bash
       run: bundle exec rails assets:precompile
 
-    - name: Setup DB
-      run: bin/rails db:drop db:create db:structure:load --trace
-
     - name: Run Rails Tests
       run: |
-        bin/rails test
-        bin/rails test:system
+        bundle exec rails test
+        bundle exec rails test:system
 
-    - name: Zeitwerk Check
-      run: bundle exec rails zeitwerk:check
-
+    - uses: actions/upload-artifact@v2-preview
+      with:
+        name: screenshots
+        path: tmp/screenshots
+      
     - name: StandardRB Check
       run: bundle exec standardrb --format progress
 
