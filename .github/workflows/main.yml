@@ -29,7 +29,7 @@ jobs:
         ports: ['6379:6379']
         options: --entrypoint redis-server
     container:
-      image: andrewmcodes/locomotive:v0.0.1
+      image: andrewmcodes/locomotive:latest
       env:
         DEFAULT_HOST: app.codefund.io
     steps:
