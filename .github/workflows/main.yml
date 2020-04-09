@@ -43,11 +43,6 @@ jobs:
       run: |
         find app/javascript -type f | xargs -d'\n' -P0 -n1 md5sum | sort -k 2 | md5sum > dependency_checksum
     
-    - run: |
-          sudo curl -sL https://deb.nodesource.com/setup_13.x | sudo bash -
-          curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-          echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-          sudo apt-get update && sudo apt-get install -y libpq-dev postgresql-client nodejs yarn
         
     - name: Restore gem cache
       id: gem-cache
